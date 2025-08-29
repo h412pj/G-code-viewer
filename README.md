@@ -1,4 +1,4 @@
-# G-Code Viewer (.tap)
+# G-Code Viewer v0.1
 
 Простой веб-просмотрщик G-кода для файлов `.tap`, `.gcode` или `.txt`.
 
