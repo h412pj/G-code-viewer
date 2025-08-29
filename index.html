@@ -2,41 +2,113 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>Визуализация G-кода (.tap)</title>
+    <title>G-Code Viewer (.tap)</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
+        body {
+            background: #f4f4f9;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        h2 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 1rem;
+        }
         #canvas {
-            border: 1px solid #ccc;
+            border: 2px solid #ccc;
             background: #fff;
             width: 100%;
             height: 600px;
             display: block;
-            margin: 0 auto;
+            margin: 0 auto 1rem auto;
+            border-radius: 8px;
+        }
+        #gcode-info {
+            background: #ffffff;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+            padding: 1rem;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+            margin-bottom: 1rem;
+        }
+        .btn-primary {
+            background: linear-gradient(90deg, #4a90e2, #357ABD);
+            border: none;
+        }
+        .btn-primary:hover {
+            background: linear-gradient(90deg, #357ABD, #2a5d99);
+        }
+        footer {
+            text-align: center;
+            margin-top: 3rem;
+            padding: 1rem 0;
+            color: #777;
+            font-size: 14px;
+        }
+        .author-info {
+            text-align: center;
+            margin-top: 1rem;
+            font-size: 14px;
+            color: #555;
+        }
+        .author-info a {
+            text-decoration: none;
+            color: #357ABD;
+        }
+        .author-info a:hover {
+            text-decoration: underline;
+        }
+        .github-btn {
+            display: block;
+            text-align: center;
+            margin-bottom: 1.5rem;
+        }
+        .github-btn a {
+            background-color: #24292e;
+            color: #fff;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            text-decoration: none;
+            font-weight: bold;
+        }
+        .github-btn a:hover {
+            background-color: #444c56;
         }
     </style>
 </head>
-<body class="bg-light">
+<body>
 <div class="container py-5">
-    <h2 class="mb-4">Визуализация G-кода (.tap)</h2>
+    <h2>G-Code Viewer v0.1</h2>
+
+   
+
     <form id="fileForm" class="mb-3">
         <input type="file" id="fileInput" accept=".tap,.gcode,.txt" class="form-control mb-2" required>
         <button type="submit" class="btn btn-primary">Загрузить и отобразить</button>
     </form>
+
     <div class="row">
         <div class="col-lg-9 col-12">
             <canvas id="canvas" width="900" height="600"></canvas>
         </div>
         <div class="col-lg-3 col-12">
-            <div id="gcode-info" class="border rounded p-3 bg-white">
+            <div id="gcode-info">
                 <b>Информация:</b>
                 <div id="gcode-info-content" class="mt-2"></div>
             </div>
         </div>
     </div>
+
     <div id="info" class="mt-3"></div>
 </div>
+
+<footer>
+    Создано <a href="https://github.com/h412pj/G-code-viewer?tab=readme-ov-file" target="_blank">h412pj</a> на GitHub
+</footer>
+
 <script>
+// Обработчик загрузки файла
 document.getElementById('fileForm').addEventListener('submit', function(e) {
     e.preventDefault();
     const file = document.getElementById('fileInput').files[0];
@@ -52,12 +124,12 @@ document.getElementById('fileForm').addEventListener('submit', function(e) {
     reader.readAsText(file);
 });
 
-// Парсер G-кода (под твой формат .tap)
+// Парсер G-кода
 function parseGCodePasses(text) {
     const lines = text.split(/\r?\n/);
-    let x = 0, y = 0, z = 0;
-    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-    let minZ = Infinity, maxZ = -Infinity;
+    let x=0, y=0, z=0;
+    let minX=Infinity, minY=Infinity, maxX=-Infinity, maxY=-Infinity;
+    let minZ=Infinity, maxZ=-Infinity;
     let currentPass = [];
     const passes = [];
     const safeZ = 19;
@@ -65,142 +137,104 @@ function parseGCodePasses(text) {
     let lastMove = null;
 
     function pushPoint(px, py, pz) {
-        minX = Math.min(minX, px); minY = Math.min(minY, py); minZ = Math.min(minZ, pz);
-        maxX = Math.max(maxX, px); maxY = Math.max(maxY, py); maxZ = Math.max(maxZ, pz);
-        currentPass.push({x: px, y: py, z: pz});
+        minX=Math.min(minX,px); minY=Math.min(minY,py); minZ=Math.min(minZ,pz);
+        maxX=Math.max(maxX,px); maxY=Math.max(maxY,py); maxZ=Math.max(maxZ,pz);
+        currentPass.push({x:px, y:py, z:pz});
     }
     function flushPass() {
-        if (currentPass.length > 0) {
-            passes.push(currentPass);
-            currentPass = [];
-        }
+        if(currentPass.length>0){passes.push(currentPass); currentPass=[];}
     }
 
-    for (const line of lines) {
+    for(const line of lines){
         const clean = line.replace(/;.*/, '').trim();
-        if (!clean) continue;
+        if(!clean) continue;
 
-        if (/^G90/i.test(clean)) absolute = true;
-        if (/^G91/i.test(clean)) absolute = false;
+        if(/^G90/i.test(clean)) absolute=true;
+        if(/^G91/i.test(clean)) absolute=false;
 
-        let nx = x, ny = y, nz = z;
+        let nx=x, ny=y, nz=z;
         let match;
-        match = clean.match(/X(-?\d*\.?\d*)/i); if (match) nx = absolute ? parseFloat(match[1]) : x + parseFloat(match[1]);
-        match = clean.match(/Y(-?\d*\.?\d*)/i); if (match) ny = absolute ? parseFloat(match[1]) : y + parseFloat(match[1]);
-        match = clean.match(/Z(-?\d*\.?\d*)/i); if (match) nz = absolute ? parseFloat(match[1]) : z + parseFloat(match[1]);
+        match = clean.match(/X(-?\d*\.?\d*)/i); if(match) nx=absolute?parseFloat(match[1]):x+parseFloat(match[1]);
+        match = clean.match(/Y(-?\d*\.?\d*)/i); if(match) ny=absolute?parseFloat(match[1]):y+parseFloat(match[1]);
+        match = clean.match(/Z(-?\d*\.?\d*)/i); if(match) nz=absolute?parseFloat(match[1]):z+parseFloat(match[1]);
 
-        if (/^G0/i.test(clean)) {
-            lastMove = "G0";
-            flushPass();
-            x = nx; y = ny; z = nz;
-            continue;
-        }
-        if (/^G1/i.test(clean)) {
-            lastMove = "G1";
-            x = nx; y = ny; z = nz;
-            pushPoint(x, y, z);
-            continue;
+        if(/^G0/i.test(clean)){ lastMove="G0"; flushPass(); x=nx;y=ny;z=nz; continue; }
+        if(/^G1/i.test(clean)){ lastMove="G1"; x=nx;y=ny;z=nz; pushPoint(x,y,z); continue; }
+
+        if(lastMove==="G1" && (clean.includes("X")||clean.includes("Y")||clean.includes("Z"))){
+            x=nx;y=ny;z=nz; pushPoint(x,y,z);
         }
 
-        if (lastMove === "G1" && (clean.includes("X") || clean.includes("Y") || clean.includes("Z"))) {
-            x = nx; y = ny; z = nz;
-            pushPoint(x, y, z);
-        }
-
-        if (nz >= safeZ) {
-            flushPass();
-        }
+        if(nz>=safeZ) flushPass();
     }
-
     flushPass();
-    return {passes, minX, minY, maxX, maxY, minZ, maxZ};
+    return {passes,minX,minY,maxX,maxY,minZ,maxZ};
 }
 
 // Цвета
-const passColors = [
-    '#ffb300', '#29b6f6', '#43a047', '#fdd835', '#1976d2', '#e65100', '#e57373', '#000000',
-    '#fbc02d', '#0288d1', '#c62828', '#8bc34a', '#ffd600', '#1565c0', '#ff9800', '#ec407a'
-];
+const passColors = ['#ffb300','#29b6f6','#43a047','#fdd835','#1976d2','#e65100','#e57373','#000000',
+'#fbc02d','#0288d1','#c62828','#8bc34a','#ffd600','#1565c0','#ff9800','#ec407a'];
 
-function drawGCodePasses(gcode, canvas) {
-    const ctx = canvas.getContext('2d');
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+function drawGCodePasses(gcode, canvas){
+    const ctx=canvas.getContext('2d');
+    ctx.clearRect(0,0,canvas.width,canvas.height);
 
-    const pad = 50;
-    const w = canvas.width - pad*2;
-    const h = canvas.height - pad*2;
-    const dx = gcode.maxX - gcode.minX || 1;
-    const dy = gcode.maxY - gcode.minY || 1;
-    const scale = Math.min(w/dx, h/dy);
+    const pad=50, w=canvas.width-pad*2, h=canvas.height-pad*2;
+    const dx=gcode.maxX-gcode.minX||1, dy=gcode.maxY-gcode.minY||1;
+    const scale=Math.min(w/dx,h/dy);
 
     ctx.save();
-    ctx.translate(pad, pad + h);
-    ctx.scale(1, -1);
-    ctx.translate(-gcode.minX*scale, -gcode.minY*scale);
+    ctx.translate(pad,pad+h);
+    ctx.scale(1,-1);
+    ctx.translate(-gcode.minX*scale,-gcode.minY*scale);
 
-    gcode.passes.forEach((pass, idx) => {
-        if (pass.length === 0) return;
+    gcode.passes.forEach((pass, idx)=>{
+        if(pass.length===0) return;
         ctx.beginPath();
-        for (let i = 0; i < pass.length; i++) {
-            const px = pass[i].x * scale;
-            const py = pass[i].y * scale;
-            if (i === 0) ctx.moveTo(px, py);
-            else ctx.lineTo(px, py);
+        for(let i=0;i<pass.length;i++){
+            const px=pass[i].x*scale, py=pass[i].y*scale;
+            if(i===0) ctx.moveTo(px,py); else ctx.lineTo(px,py);
         }
-        ctx.strokeStyle = passColors[idx % passColors.length];
-        ctx.lineWidth = 1.2;
+        ctx.strokeStyle=passColors[idx%passColors.length];
+        ctx.lineWidth=1.2;
         ctx.stroke();
     });
     ctx.restore();
-    drawAxes(ctx, gcode, canvas.width, canvas.height, pad);
+    drawAxes(ctx,gcode,canvas.width,canvas.height,pad);
 }
 
-function drawAxes(ctx, gcode, width, height, pad) {
-    const dx = (gcode.maxX - gcode.minX).toFixed(0);
-    const dy = (gcode.maxY - gcode.minY).toFixed(0);
+function drawAxes(ctx,gcode,width,height,pad){
+    const dx=(gcode.maxX-gcode.minX).toFixed(0), dy=(gcode.maxY-gcode.minY).toFixed(0);
+    ctx.save();
+    ctx.fillStyle='#222';
+    ctx.font='14px Arial';
+    ctx.textAlign='center';
+    ctx.textBaseline='top';
+    ctx.fillText(`X (${dx})`,width/2,height-pad/2);
 
     ctx.save();
-    ctx.fillStyle = '#222';
-    ctx.font = '14px Arial';
-
-    // === Подпись оси X с габаритом ===
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'top';
-    ctx.fillText(`X (${dx})`, width/2, height - pad/2);
-
-    // === Подпись оси Y с габаритом ===
-    ctx.save();
-    ctx.translate(pad/2, height/2);
+    ctx.translate(pad/2,height/2);
     ctx.rotate(-Math.PI/2);
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'bottom';
-    ctx.fillText(`Y (${dy})`, 0, 0);
+    ctx.textAlign='center';
+    ctx.textBaseline='bottom';
+    ctx.fillText(`Y (${dy})`,0,0);
     ctx.restore();
 
-    // Заголовок сверху
-    ctx.font = '20px Arial';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'top';
-    ctx.fillText('my-STYLE GCode Viewer', width/2, 10);
-
+    ctx.font='20px Arial';
+    ctx.textAlign='center';
+    ctx.textBaseline='top';
+    ctx.fillText('G-Code Viewer',width/2,10);
     ctx.restore();
 }
 
-// Информационный блок справа
-function renderGcodeInfo(gcode) {
-    const el = document.getElementById('gcode-info-content');
-    if (!el) return;
-    // Габариты
-    const width = (gcode.maxX - gcode.minX).toFixed(2);
-    const height = (gcode.maxY - gcode.minY).toFixed(2);
-    // Макс. глубина
-    let minZ = gcode.minZ;
-    // Подъём (максимальный Z между минусом и safeZ)
-    let liftZ = -Infinity;
-    gcode.passes.forEach(pass => pass.forEach(pt => { if (pt.z > liftZ && pt.z < 1000) liftZ = pt.z; }));
-    // Количество проходов
-    const passesCount = gcode.passes.length;
-    el.innerHTML = `
+function renderGcodeInfo(gcode){
+    const el=document.getElementById('gcode-info-content');
+    if(!el) return;
+    const width=(gcode.maxX-gcode.minX).toFixed(2), height=(gcode.maxY-gcode.minY).toFixed(2);
+    let minZ=gcode.minZ, liftZ=-Infinity;
+    gcode.passes.forEach(pass=>pass.forEach(pt=>{if(pt.z>liftZ && pt.z<1000) liftZ=pt.z;}));
+    const passesCount=gcode.passes.length;
+    el.innerHTML=`
         <div>📏 <b>Габариты:</b> ${width} × ${height}</div>
         <div>⛏ <b>Макс. глубина:</b> ${minZ.toFixed(2)}</div>
         <div>🔼 <b>Подъём:</b> Z${liftZ.toFixed(2)}</div>
@@ -208,6 +242,5 @@ function renderGcodeInfo(gcode) {
     `;
 }
 </script>
-
 </body>
 </html>
