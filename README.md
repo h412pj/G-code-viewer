@@ -4,7 +4,7 @@
 
 💻 **Live Demo:** [G-Code Viewer Demo](https://h412pj.github.io/G-code-viewer/)
 
-![Screenshot]([screenshot.jpg])  
+![Screenshot](screenshot.jpg)
 
 ## Особенности
 
