@@ -1,240 +1,1826 @@
 <!DOCTYPE html>
 <html lang="ru">
+
 <head>
     <meta charset="UTF-8">
-    <title>G-Code Viewer v0.1</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <title>Визуализация G-кода (.tap)</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap"
+        rel="stylesheet">
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
     <style>
+        :root {
+            --bg-base: #0b0f19;
+            --bg-surface: #1e293b;
+            --bg-surface-elevated: #334155;
+            --border-color: rgba(255, 255, 255, 0.08);
+            --border-hover: rgba(255, 255, 255, 0.16);
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            --color-accent: #38bdf8;
+            --color-accent-hover: #0ea5e9;
+            --color-danger: #ef4444;
+            --color-warning: #f59e0b;
+            --color-success: #10b981;
+
+            --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+            --shadow-lg: 0 10px 25px -5px rgba(0, 0, 0, 0.3), 0 8px 10px -6px rgba(0, 0, 0, 0.3);
+            --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 10px 10px -5px rgba(0, 0, 0, 0.5);
+            --radius-lg: 16px;
+            --radius-md: 12px;
+            --radius-sm: 8px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
         body {
-            background: #f4f4f9;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-base);
+            color: var(--text-primary);
+            font-family: var(--font-sans);
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
         }
-        h2 {
-            text-align: center;
-            color: #333;
-            margin-bottom: 1rem;
+
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
         }
-        #canvas {
-            border: 2px solid #ccc;
-            background: #fff;
-            width: 100%;
-            height: 600px;
-            display: block;
-            margin: 0 auto 1rem auto;
-            border-radius: 8px;
+
+        ::-webkit-scrollbar-track {
+            background: var(--bg-base);
         }
-        #gcode-info {
-            background: #ffffff;
-            border-radius: 8px;
-            border: 1px solid #ddd;
-            padding: 1rem;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.05);
-            margin-bottom: 1rem;
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--bg-surface-elevated);
+            border-radius: var(--radius-sm);
         }
-        .btn-primary {
-            background: linear-gradient(90deg, #4a90e2, #357ABD);
-            border: none;
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--color-accent);
         }
-        .btn-primary:hover {
-            background: linear-gradient(90deg, #357ABD, #2a5d99);
+
+        header {
+            background: rgba(30, 41, 59, 0.6);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border-color);
+            padding: 0.75rem 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 10;
         }
-        footer {
-            text-align: center;
-            margin-top: 3rem;
-            padding: 1rem 0;
-            color: #777;
-            font-size: 14px;
+
+        .header-logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
         }
-        .author-info {
-            text-align: center;
-            margin-top: 1rem;
-            font-size: 14px;
-            color: #555;
+
+        .header-logo i {
+            font-size: 1.5rem;
+            color: var(--color-accent);
+            filter: drop-shadow(0 0 8px rgba(56, 189, 248, 0.4));
         }
-        .author-info a {
-            text-decoration: none;
-            color: #357ABD;
+
+        .header-title h1 {
+            font-size: 1.1rem;
+            font-weight: 700;
+            letter-spacing: -0.025em;
         }
-        .author-info a:hover {
-            text-decoration: underline;
+
+        .header-title p {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
         }
-        .github-btn {
-            display: block;
-            text-align: center;
-            margin-bottom: 1.5rem;
+
+        .header-actions {
+            display: flex;
+            gap: 0.75rem;
         }
-        .github-btn a {
-            background-color: #24292e;
-            color: #fff;
+
+        .btn-demo {
+            background: rgba(56, 189, 248, 0.1);
+            color: var(--color-accent);
+            border: 1px solid rgba(56, 189, 248, 0.2);
             padding: 0.5rem 1rem;
-            border-radius: 6px;
-            text-decoration: none;
-            font-weight: bold;
+            border-radius: var(--radius-sm);
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: all 0.2s ease;
         }
-        .github-btn a:hover {
-            background-color: #444c56;
+
+        .btn-demo:hover {
+            background: var(--color-accent);
+            color: var(--bg-base);
+            box-shadow: 0 0 15px rgba(56, 189, 248, 0.4);
+            transform: translateY(-1px);
+        }
+
+        .workspace {
+            flex: 1;
+            display: grid;
+            grid-template-columns: 360px 1fr;
+            height: calc(100vh - 60px);
+            position: relative;
+        }
+
+        @media (max-width: 900px) {
+            .workspace {
+                grid-template-columns: 1fr;
+                grid-template-rows: auto 1fr;
+                overflow-y: auto;
+                height: auto;
+            }
+        }
+
+        .sidebar {
+            background: rgba(15, 23, 42, 0.8);
+            border-right: 1px solid var(--border-color);
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            overflow-y: auto;
+            backdrop-filter: blur(8px);
+        }
+
+        .card {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            padding: 1.25rem;
+            box-shadow: var(--shadow-lg);
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .card:hover {
+            border-color: var(--border-hover);
+        }
+
+        .card-title {
+            font-size: 0.875rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .card-title i {
+            color: var(--color-accent);
+        }
+
+        .upload-zone {
+            border: 2px dashed rgba(255, 255, 255, 0.15);
+            border-radius: var(--radius-md);
+            padding: 1.5rem 1rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.25s ease;
+            position: relative;
+            background: rgba(30, 41, 59, 0.3);
+        }
+
+        .upload-zone:hover,
+        .upload-zone.dragover {
+            border-color: var(--color-accent);
+            background: rgba(56, 189, 248, 0.05);
+            box-shadow: inset 0 0 10px rgba(56, 189, 248, 0.1);
+        }
+
+        .upload-icon {
+            font-size: 2rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.75rem;
+            transition: transform 0.2s ease, color 0.2s ease;
+        }
+
+        .upload-zone:hover .upload-icon {
+            color: var(--color-accent);
+            transform: translateY(-3px);
+        }
+
+        .upload-text {
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: var(--text-primary);
+            margin-bottom: 0.25rem;
+        }
+
+        .upload-subtext {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        #fileInput {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            cursor: pointer;
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .input-number-wrapper {
+            display: flex;
+            background: var(--bg-base);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-sm);
+            overflow: hidden;
+            transition: border-color 0.2s;
+        }
+
+        .input-number-wrapper:focus-within {
+            border-color: var(--color-accent);
+        }
+
+        .input-number-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            width: 38px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+            transition: background 0.2s, color 0.2s;
+        }
+
+        .input-number-btn:hover {
+            background: var(--bg-surface-elevated);
+            color: var(--text-primary);
+        }
+
+        .form-input-number {
+            flex: 1;
+            background: transparent;
+            border: none;
+            color: var(--text-primary);
+            font-family: var(--font-mono);
+            font-size: 0.9rem;
+            text-align: center;
+            padding: 0.5rem 0;
+            outline: none;
+            width: 100%;
+        }
+
+        .switch-container {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: rgba(30, 41, 59, 0.4);
+            padding: 0.75rem;
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--border-color);
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .switch-label-wrapper {
+            display: flex;
+            flex-direction: column;
+            gap: 0.15rem;
+        }
+
+        .switch-title {
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .switch-desc {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+        }
+
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 44px;
+            height: 22px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: var(--bg-surface-elevated);
+            transition: .3s;
+            border-radius: 34px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 16px;
+            width: 16px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .3s;
+            border-radius: 50%;
+        }
+
+        input:checked+.slider {
+            background-color: var(--color-accent);
+        }
+
+        input:checked+.slider:before {
+            transform: translateX(22px);
+        }
+
+        .info-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .info-row:last-child {
+            border-bottom: none;
+            padding-bottom: 0;
+        }
+
+        .info-label {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .info-value {
+            font-size: 0.85rem;
+            font-weight: 700;
+            font-family: var(--font-mono);
+            color: var(--text-primary);
+        }
+
+        .info-value.accent {
+            color: var(--color-accent);
+        }
+
+        .info-value.danger {
+            color: var(--color-danger);
+        }
+
+        .empty-state {
+            color: var(--text-muted);
+            font-style: italic;
+            font-size: 0.8rem;
+            text-align: center;
+            padding: 1.5rem 0;
+            line-height: 1.4;
+        }
+
+        .viewport-container {
+            position: relative;
+            background: #05070c;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            background-image:
+                radial-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+                linear-gradient(rgba(255, 255, 255, 0.01) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.01) 1px, transparent 1px);
+            background-size: 20px 20px, 100px 100px, 100px 100px;
+            background-position: center;
+        }
+
+        #canvas {
+            display: block;
+            max-width: 100%;
+            max-height: 100%;
+            cursor: grab;
+            transition: filter 0.2s ease;
+        }
+
+        #canvas:active {
+            cursor: grabbing;
+        }
+
+        .viewport-hud {
+            position: absolute;
+            top: 1.5rem;
+            right: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            z-index: 5;
+        }
+
+        .hud-btn {
+            background: rgba(30, 41, 59, 0.75);
+            backdrop-filter: blur(8px);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            width: 40px;
+            height: 40px;
+            border-radius: var(--radius-sm);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: var(--shadow-lg);
+        }
+
+        .hud-btn:hover {
+            background: var(--color-accent);
+            color: var(--bg-base);
+            border-color: var(--color-accent);
+            box-shadow: 0 0 12px rgba(56, 189, 248, 0.35);
+        }
+
+        .tap-tooltip {
+            position: fixed;
+            display: none;
+            background: rgba(15, 23, 42, 0.95);
+            backdrop-filter: blur(6px);
+            color: #f8fafc;
+            padding: 1rem;
+            border-radius: var(--radius-md);
+            font-size: 0.8rem;
+            font-family: var(--font-mono);
+            pointer-events: none;
+            box-shadow: var(--shadow-xl);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            z-index: 9999;
+            width: 300px;
+        }
+
+        .tap-tooltip-title {
+            font-weight: 700;
+            color: var(--color-accent);
+            margin-bottom: 0.5rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding-bottom: 0.35rem;
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.85rem;
+        }
+
+        .tap-tooltip-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0.25rem;
+        }
+
+        .tap-tooltip-label {
+            color: var(--text-secondary);
+        }
+
+        .tap-tooltip-value {
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        #tooltip-canvas {
+            background: #090d16;
+            border-radius: var(--radius-sm);
+            margin-top: 0.75rem;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            display: block;
+        }
+
+        .legend-card {
+            margin-top: auto;
+            background: rgba(30, 41, 59, 0.25);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .legend-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 0.35rem;
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+        }
+
+        .legend-color {
+            width: 14px;
+            height: 4px;
+            border-radius: 2px;
+        }
+
+        .help-keys {
+            margin-top: 0.75rem;
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            line-height: 1.4;
+        }
+
+        .help-key-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0.2rem;
+        }
+
+        .status-bar {
+            background: rgba(15, 23, 42, 0.9);
+            border-top: 1px solid var(--border-color);
+            padding: 0.35rem 1.5rem;
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-family: var(--font-mono);
+        }
+
+        .status-message {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: var(--text-muted);
+        }
+
+        .status-dot.active {
+            background-color: var(--color-success);
+            box-shadow: 0 0 6px var(--color-success);
+        }
+
+        .status-dot.loading {
+            background-color: var(--color-warning);
+            box-shadow: 0 0 6px var(--color-warning);
+            animation: pulse 1s infinite alternate;
+        }
+
+        @keyframes pulse {
+            0% {
+                opacity: 0.4;
+            }
+
+            100% {
+                opacity: 1;
+            }
         }
     </style>
 </head>
+
 <body>
-<div class="container py-5">
-    <h2>G-Code Viewer v0.1</h2>
 
-   
-
-    <form id="fileForm" class="mb-3">
-        <input type="file" id="fileInput" accept=".tap,.gcode,.txt" class="form-control mb-2" required>
-        <button type="submit" class="btn btn-primary">Загрузить и отобразить</button>
-    </form>
-
-    <div class="row">
-        <div class="col-lg-9 col-12">
-            <canvas id="canvas" width="900" height="600"></canvas>
-        </div>
-        <div class="col-lg-3 col-12">
-            <div id="gcode-info">
-                <b>Информация:</b>
-                <div id="gcode-info-content" class="mt-2"></div>
+    <header>
+        <div class="header-logo">
+            <i class="fas fa-cubes"></i>
+            <div class="header-title">
+                <h1>G-Code &amp; .TAP Viewer</h1>
+                <p>Создано <a href="https://github.com/h412pj/G-code-viewer?tab=readme-ov-file" target="_blank"
+                        style="color: var(--color-accent); text-decoration: none; font-weight: 500;">h412pj</a> на
+                    GitHub</p>
             </div>
         </div>
+        <div class="header-actions">
+            <button class="btn-demo" id="btnLoadDemo" title="Загрузить тестовую деталь">
+                <i class="fas fa-wand-magic-sparkles"></i>
+                Демонстрационный файл
+            </button>
+        </div>
+    </header>
+
+    <div class="workspace">
+        
+        <aside class="sidebar">
+            
+            <div class="card">
+                <div class="card-title">
+                    <i class="fas fa-file-import"></i>
+                    Файл траектории
+                </div>
+                <div class="upload-zone" id="dropZone">
+                    <i class="fas fa-cloud-upload-alt upload-icon"></i>
+                    <div class="upload-text">Перетащите файл сюда</div>
+                    <div class="upload-subtext">Поддерживаются .tap, .gcode, .txt</div>
+                    <input type="file" id="fileInput" accept=".tap,.gcode,.txt">
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-title">
+                    <i class="fas fa-sliders-h"></i>
+                    Параметры
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="cutterDiameter">
+                        <span>Диаметр фрезы</span>
+                        <span style="font-family: var(--font-mono); color: var(--color-accent);" id="cutterVal">8.0
+                            мм</span>
+                    </label>
+                    <div class="input-number-wrapper">
+                        <button class="input-number-btn" id="btnCutterMinus"><i class="fas fa-minus"></i></button>
+                        <input type="number" id="cutterDiameter" class="form-input-number" value="8" min="0.1" max="100"
+                            step="0.5">
+                        <button class="input-number-btn" id="btnCutterPlus"><i class="fas fa-plus"></i></button>
+                    </div>
+                </div>
+
+                <div class="switch-container" id="switchMerge">
+                    <div class="switch-label-wrapper">
+                        <span class="switch-title">Объединять линии</span>
+                    </div>
+                    <label class="switch">
+                        <input type="checkbox" id="mergeLinesCheck" checked>
+                        <span class="slider"></span>
+                    </label>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-title">
+                    <i class="fas fa-chart-bar"></i>
+                    Свойства траектории
+                </div>
+                <div id="gcode-info-content" class="info-grid">
+                    <div class="empty-state">
+                        Файл не загружен.<br>Выберите файл или нажмите кнопку демонстрационного режима.
+                    </div>
+                </div>
+            </div>
+
+        </aside>
+
+        <main class="viewport-container" id="viewport">
+            <canvas id="canvas" width="900" height="600"></canvas>
+
+            <div class="viewport-hud">
+                <button class="hud-btn" id="btnZoomIn" title="Увеличить"><i class="fas fa-search-plus"></i></button>
+                <button class="hud-btn" id="btnZoomOut" title="Уменьшить"><i class="fas fa-search-minus"></i></button>
+                <button class="hud-btn" id="btnFit" title="Показать всё"><i
+                        class="fas fa-expand-arrows-alt"></i></button>
+                <button class="hud-btn" id="btnReset" title="Сбросить вид"><i class="fas fa-undo"></i></button>
+            </div>
+        </main>
     </div>
 
-    <div id="info" class="mt-3"></div>
-</div>
-<footer>
-    Создано <a href="https://github.com/h412pj/G-code-viewer?tab=readme-ov-file" target="_blank">h412pj</a> на GitHub
-</footer>
-<script>
-document.getElementById('fileForm').addEventListener('submit', function(e) {
-    e.preventDefault();
-    const file = document.getElementById('fileInput').files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = function(evt) {
-        const text = evt.target.result;
-        const gcode = parseGCodePasses(text);
-        drawGCodePasses(gcode, document.getElementById('canvas'));
-        renderGcodeInfo(gcode);
-        document.getElementById('info').innerHTML = '';
-    };
-    reader.readAsText(file);
-});
-function parseGCodePasses(text) {
-    const lines = text.split(/\r?\n/);
-    let x=0, y=0, z=0;
-    let minX=Infinity, minY=Infinity, maxX=-Infinity, maxY=-Infinity;
-    let minZ=Infinity, maxZ=-Infinity;
-    let currentPass = [];
-    const passes = [];
-    const safeZ = 19;
-    let absolute = true;
-    let lastMove = null;
+    <footer class="status-bar">
+        <div class="status-message">
+            <div class="status-dot" id="statusDot"></div>
+            <span id="statusText">Готов к работе</span>
+        </div>
+        <div id="fileStatus">Нет активного файла</div>
+    </footer>
 
-    function pushPoint(px, py, pz) {
-        minX=Math.min(minX,px); minY=Math.min(minY,py); minZ=Math.min(minZ,pz);
-        maxX=Math.max(maxX,px); maxY=Math.max(maxY,py); maxZ=Math.max(maxZ,pz);
-        currentPass.push({x:px, y:py, z:pz});
-    }
-    function flushPass() {
-        if(currentPass.length>0){passes.push(currentPass); currentPass=[];}
-    }
+    <div id="tap-tooltip" class="tap-tooltip"></div>
 
-    for(const line of lines){
-        const clean = line.replace(/;.*/, '').trim();
-        if(!clean) continue;
+    <script>
+        let currentGCode = null;
+        let activeFileName = '';
+        const canvas = document.getElementById('canvas');
+        const viewport = document.getElementById('viewport');
+        const tooltip = document.getElementById('tap-tooltip');
+        const statusDot = document.getElementById('statusDot');
+        const statusText = document.getElementById('statusText');
+        const fileStatus = document.getElementById('fileStatus');
 
-        if(/^G90/i.test(clean)) absolute=true;
-        if(/^G91/i.test(clean)) absolute=false;
+        let zoomScale = 1.0;
+        let panOffset = { x: 0, y: 0 };
+        let isDragging = false;
+        let dragStart = { x: 0, y: 0 };
+        let originalPan = { x: 0, y: 0 };
 
-        let nx=x, ny=y, nz=z;
-        let match;
-        match = clean.match(/X(-?\d*\.?\d*)/i); if(match) nx=absolute?parseFloat(match[1]):x+parseFloat(match[1]);
-        match = clean.match(/Y(-?\d*\.?\d*)/i); if(match) ny=absolute?parseFloat(match[1]):y+parseFloat(match[1]);
-        match = clean.match(/Z(-?\d*\.?\d*)/i); if(match) nz=absolute?parseFloat(match[1]):z+parseFloat(match[1]);
+        const passColors = [
+            '#38bdf8', '#fb923c', '#4ade80', '#facc15', '#f87171', '#c084fc',
+            '#2dd4bf', '#fb7185', '#a3e635', '#60a5fa', '#f472b6', '#34d399'
+        ];
 
-        if(/^G0/i.test(clean)){ lastMove="G0"; flushPass(); x=nx;y=ny;z=nz; continue; }
-        if(/^G1/i.test(clean)){ lastMove="G1"; x=nx;y=ny;z=nz; pushPoint(x,y,z); continue; }
+        function resizeCanvas() {
+            const rect = viewport.getBoundingClientRect();
+            canvas.width = rect.width;
+            canvas.height = rect.height;
+            if (currentGCode) {
+                drawGCodePasses(currentGCode, canvas);
+            }
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
 
-        if(lastMove==="G1" && (clean.includes("X")||clean.includes("Y")||clean.includes("Z"))){
-            x=nx;y=ny;z=nz; pushPoint(x,y,z);
+        const inputCutter = document.getElementById('cutterDiameter');
+        const cutterVal = document.getElementById('cutterVal');
+        function updateCutterVal() {
+            const val = parseFloat(inputCutter.value) || 0;
+            cutterVal.textContent = val.toFixed(1) + ' мм';
+            if (currentGCode) {
+                drawGCodePasses(currentGCode, canvas);
+            }
+        }
+        inputCutter.addEventListener('input', updateCutterVal);
+
+        document.getElementById('btnCutterMinus').addEventListener('click', () => {
+            let val = parseFloat(inputCutter.value) || 0;
+            val = Math.max(0.1, val - 0.5);
+            inputCutter.value = val;
+            updateCutterVal();
+        });
+        document.getElementById('btnCutterPlus').addEventListener('click', () => {
+            let val = parseFloat(inputCutter.value) || 0;
+            val = val + 0.5;
+            inputCutter.value = val;
+            updateCutterVal();
+        });
+
+        document.getElementById('switchMerge').addEventListener('click', (e) => {
+            if (e.target.tagName !== 'INPUT') {
+                const chk = document.getElementById('mergeLinesCheck');
+                chk.checked = !chk.checked;
+                
+                if (currentGCode) drawGCodePasses(currentGCode, canvas);
+            }
+        });
+        document.getElementById('mergeLinesCheck').addEventListener('change', () => {
+            if (currentGCode) drawGCodePasses(currentGCode, canvas);
+        });
+
+        const fileInput = document.getElementById('fileInput');
+        const dropZone = document.getElementById('dropZone');
+
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('dragover');
+        });
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('dragover');
+        });
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            const file = e.dataTransfer.files[0];
+            if (file) handleFile(file);
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) handleFile(file);
+        });
+
+        function updateStatus(text, status = 'active') {
+            statusText.textContent = text;
+            statusDot.className = 'status-dot';
+            if (status === 'active') statusDot.classList.add('active');
+            if (status === 'loading') statusDot.classList.add('loading');
         }
 
-        if(nz>=safeZ) flushPass();
-    }
-    flushPass();
-    return {passes,minX,minY,maxX,maxY,minZ,maxZ};
-}
-const passColors = ['#ffb300','#29b6f6','#43a047','#fdd835','#1976d2','#e65100','#e57373','#000000',
-'#fbc02d','#0288d1','#c62828','#8bc34a','#ffd600','#1565c0','#ff9800','#ec407a'];
+        function handleFile(file) {
+            updateStatus('Чтение файла...', 'loading');
+            activeFileName = file.name;
+            fileStatus.textContent = file.name;
 
-function drawGCodePasses(gcode, canvas){
-    const ctx=canvas.getContext('2d');
-    ctx.clearRect(0,0,canvas.width,canvas.height);
-
-    const pad=50, w=canvas.width-pad*2, h=canvas.height-pad*2;
-    const dx=gcode.maxX-gcode.minX||1, dy=gcode.maxY-gcode.minY||1;
-    const scale=Math.min(w/dx,h/dy);
-
-    ctx.save();
-    ctx.translate(pad,pad+h);
-    ctx.scale(1,-1);
-    ctx.translate(-gcode.minX*scale,-gcode.minY*scale);
-
-    gcode.passes.forEach((pass, idx)=>{
-        if(pass.length===0) return;
-        ctx.beginPath();
-        for(let i=0;i<pass.length;i++){
-            const px=pass[i].x*scale, py=pass[i].y*scale;
-            if(i===0) ctx.moveTo(px,py); else ctx.lineTo(px,py);
+            const reader = new FileReader();
+            reader.onload = function (evt) {
+                const text = evt.target.result;
+                processGCodeText(text);
+            };
+            reader.onerror = function () {
+                updateStatus('Ошибка при чтении файла', 'danger');
+                statusDot.style.backgroundColor = 'var(--color-danger)';
+            };
+            reader.readAsText(file);
         }
-        ctx.strokeStyle=passColors[idx%passColors.length];
-        ctx.lineWidth=1.2;
-        ctx.stroke();
-    });
-    ctx.restore();
-    drawAxes(ctx,gcode,canvas.width,canvas.height,pad);
-}
 
-function drawAxes(ctx,gcode,width,height,pad){
-    const dx=(gcode.maxX-gcode.minX).toFixed(0), dy=(gcode.maxY-gcode.minY).toFixed(0);
-    ctx.save();
-    ctx.fillStyle='#222';
-    ctx.font='14px Arial';
-    ctx.textAlign='center';
-    ctx.textBaseline='top';
-    ctx.fillText(`X (${dx})`,width/2,height-pad/2);
+        function processGCodeText(text) {
+            updateStatus('Обработка G-кода...', 'loading');
+            setTimeout(() => {
+                try {
+                    currentGCode = parseGCodePasses(text);
+                    resetView();
+                    renderGcodeInfo(currentGCode);
+                    updateLegend(currentGCode.passes.length);
+                    updateStatus('Готово: файл успешно загружен');
+                    hideTooltip();
+                } catch (err) {
+                    console.error(err);
+                    updateStatus('Ошибка парсинга файла', 'danger');
+                }
+            }, 50);
+        }
 
-    ctx.save();
-    ctx.translate(pad/2,height/2);
-    ctx.rotate(-Math.PI/2);
-    ctx.textAlign='center';
-    ctx.textBaseline='bottom';
-    ctx.fillText(`Y (${dy})`,0,0);
-    ctx.restore();
+        function fitToScreen() {
+            if (!currentGCode) return;
+            const pad = 50;
+            const w = canvas.width - pad * 2;
+            const h = canvas.height - pad * 2;
+            const dx = currentGCode.maxX - currentGCode.minX || 1;
+            const dy = currentGCode.maxY - currentGCode.minY || 1;
 
-    ctx.font='20px Arial';
-    ctx.textAlign='center';
-    ctx.textBaseline='top';
-    ctx.fillText('G-Code Viewer',width/2,10);
-    ctx.restore();
-}
+            zoomScale = Math.min(w / dx, h / dy);
 
-function renderGcodeInfo(gcode){
-    const el=document.getElementById('gcode-info-content');
-    if(!el) return;
-    const width=(gcode.maxX-gcode.minX).toFixed(2), height=(gcode.maxY-gcode.minY).toFixed(2);
-    let minZ=gcode.minZ, liftZ=-Infinity;
-    gcode.passes.forEach(pass=>pass.forEach(pt=>{if(pt.z>liftZ && pt.z<1000) liftZ=pt.z;}));
-    const passesCount=gcode.passes.length;
-    el.innerHTML=`
-        <div>📏 <b>Габариты:</b> ${width} × ${height}</div>
-        <div>⛏ <b>Макс. глубина:</b> ${minZ.toFixed(2)}</div>
-        <div>🔼 <b>Подъём:</b> Z${liftZ.toFixed(2)}</div>
-        <div>🔄 <b>Проходов:</b> ${passesCount}</div>
-    `;
-}
-</script>
+            const centerX = (currentGCode.minX + currentGCode.maxX) / 2;
+            const centerY = (currentGCode.minY + currentGCode.maxY) / 2;
+
+            panOffset.x = canvas.width / 2 - centerX * zoomScale;
+            panOffset.y = canvas.height / 2 + centerY * zoomScale - canvas.height; 
+
+            panOffset.x = 0;
+            panOffset.y = 0;
+            zoomScale = 1.0;
+
+            drawGCodePasses(currentGCode, canvas);
+        }
+
+        function resetView() {
+            zoomScale = 1.0;
+            panOffset = { x: 0, y: 0 };
+            if (currentGCode) {
+                drawGCodePasses(currentGCode, canvas);
+            }
+        }
+
+        document.getElementById('btnZoomIn').addEventListener('click', () => {
+            if (!currentGCode) return;
+            zoomScale = Math.min(40, zoomScale * 1.25);
+            drawGCodePasses(currentGCode, canvas);
+        });
+        document.getElementById('btnZoomOut').addEventListener('click', () => {
+            if (!currentGCode) return;
+            zoomScale = Math.max(0.1, zoomScale / 1.25);
+            drawGCodePasses(currentGCode, canvas);
+        });
+        document.getElementById('btnFit').addEventListener('click', fitToScreen);
+        document.getElementById('btnReset').addEventListener('click', resetView);
+
+        document.getElementById('btnLoadDemo').addEventListener('click', () => {
+            activeFileName = 'demo_plate.tap';
+            fileStatus.textContent = activeFileName;
+            processGCodeText(generateSampleGCode());
+        });
+
+        canvas.addEventListener('wheel', function (e) {
+            if (!currentGCode) return;
+            e.preventDefault();
+
+            const zoomFactor = 1.1;
+            const oldScale = zoomScale;
+
+            if (e.deltaY < 0) {
+                zoomScale = Math.min(50, zoomScale * zoomFactor);
+            } else {
+                zoomScale = Math.max(0.1, zoomScale / zoomFactor);
+            }
+
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = (e.clientX - rect.left) * (canvas.width / rect.width);
+            const mouseY = (e.clientY - rect.top) * (canvas.height / rect.height);
+
+            panOffset.x = mouseX - (mouseX - panOffset.x) * (zoomScale / oldScale);
+            panOffset.y = mouseY - (mouseY - panOffset.y) * (zoomScale / oldScale);
+
+            drawGCodePasses(currentGCode, canvas);
+            hideTooltip();
+        }, { passive: false });
+
+        canvas.addEventListener('mousedown', function (e) {
+            if (!currentGCode) return;
+            if (e.button !== 0) return; 
+
+            isDragging = true;
+            dragStart.x = e.clientX;
+            dragStart.y = e.clientY;
+            originalPan.x = panOffset.x;
+            originalPan.y = panOffset.y;
+        });
+
+        canvas.addEventListener('mousemove', function (e) {
+            if (!isDragging) return;
+            const dx = e.clientX - dragStart.x;
+            const dy = e.clientY - dragStart.y;
+            panOffset.x = originalPan.x + dx;
+            panOffset.y = originalPan.y + dy;
+            drawGCodePasses(currentGCode, canvas);
+        });
+
+        window.addEventListener('mouseup', function (e) {
+            isDragging = false;
+        });
+
+        function parseGCodePasses(text) {
+            const lines = text.split(/\r?\n/);
+            let x = 0, y = 0, z = 0;
+            let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+            let minZ = Infinity, maxZ = -Infinity;
+            let maxG0Z = -Infinity;
+            let currentPass = [];
+            const passes = [];
+            const safeZ = 10; 
+            let absolute = true;
+            let lastMove = null;
+
+            function pushPoint(px, py, pz) {
+                
+                if (Math.abs(px) > 10000 || Math.abs(py) > 10000 || Math.abs(pz) > 1000) return;
+
+                minX = Math.min(minX, px); minY = Math.min(minY, py); minZ = Math.min(minZ, pz);
+                maxX = Math.max(maxX, px); maxY = Math.max(maxY, py); maxZ = Math.max(maxZ, pz);
+                currentPass.push({ x: px, y: py, z: pz });
+            }
+
+            function flushPass() {
+                if (currentPass.length > 0) {
+                    passes.push(currentPass);
+                    currentPass = [];
+                }
+            }
+
+            for (const line of lines) {
+                const clean = line.replace(/;.*/, '').replace(/\(.*\)/, '').trim(); 
+                if (!clean) continue;
+
+                if (/^G90/i.test(clean)) absolute = true;
+                if (/^G91/i.test(clean)) absolute = false;
+
+                let nx = x, ny = y, nz = z;
+                let match;
+                match = clean.match(/X(-?\d*\.?\d*)/i); if (match) nx = absolute ? parseFloat(match[1]) : x + parseFloat(match[1]);
+                match = clean.match(/Y(-?\d*\.?\d*)/i); if (match) ny = absolute ? parseFloat(match[1]) : y + parseFloat(match[1]);
+                match = clean.match(/Z(-?\d*\.?\d*)/i); if (match) nz = absolute ? parseFloat(match[1]) : z + parseFloat(match[1]);
+
+                if (/^G00?(?!\d)/i.test(clean)) {
+                    lastMove = "G0";
+                    flushPass();
+                    x = nx; y = ny; z = nz;
+                    if (clean.toUpperCase().includes("Z")) {
+                        if (z < 1000) maxG0Z = Math.max(maxG0Z, z);
+                    }
+                    continue;
+                }
+
+                if (/^G0?1(?!\d)/i.test(clean)) {
+                    lastMove = "G1";
+                    x = nx; y = ny; z = nz;
+                    pushPoint(x, y, z);
+                    continue;
+                }
+
+                if (lastMove === "G1" && (clean.includes("X") || clean.includes("Y") || clean.includes("Z"))) {
+                    x = nx; y = ny; z = nz;
+                    pushPoint(x, y, z);
+                } else if (lastMove === "G0" && (clean.includes("X") || clean.includes("Y") || clean.includes("Z"))) {
+                    x = nx; y = ny; z = nz;
+                    if (clean.toUpperCase().includes("Z")) {
+                        if (z < 1000) maxG0Z = Math.max(maxG0Z, z);
+                    }
+                }
+
+                if (nz >= safeZ) {
+                    flushPass();
+                }
+            }
+
+            flushPass();
+
+            const validPasses = passes.filter(p => p.length > 1);
+
+            if (minX === Infinity) { minX = 0; maxX = 100; minY = 0; maxY = 100; minZ = 0; maxZ = 0; }
+
+            return { passes: validPasses, minX, minY, maxX, maxY, minZ, maxZ, maxG0Z };
+        }
+
+        function drawGCodePasses(gcode, canvas, highlightedSegment = null) {
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            const pad = 50;
+            const w = canvas.width - pad * 2;
+            const h = canvas.height - pad * 2;
+            const dx = gcode.maxX - gcode.minX || 1;
+            const dy = gcode.maxY - gcode.minY || 1;
+            const scale = Math.min(w / dx, h / dy);
+
+            ctx.save();
+            
+            ctx.translate(panOffset.x, panOffset.y);
+            ctx.scale(zoomScale, zoomScale);
+
+            ctx.translate(pad, pad + h);
+            ctx.scale(1, -1);
+            ctx.translate(-gcode.minX * scale, -gcode.minY * scale);
+
+            drawDetailGrid(ctx, gcode, scale);
+
+            gcode.passes.forEach((pass, idx) => {
+                if (pass.length === 0) return;
+                ctx.beginPath();
+                for (let i = 0; i < pass.length; i++) {
+                    const px = pass[i].x * scale;
+                    const py = pass[i].y * scale;
+                    if (i === 0) ctx.moveTo(px, py);
+                    else ctx.lineTo(px, py);
+                }
+                ctx.strokeStyle = passColors[idx % passColors.length];
+                ctx.lineWidth = 2.0 / zoomScale;
+                ctx.lineCap = 'round';
+                ctx.lineJoin = 'round';
+                ctx.stroke();
+            });
+            ctx.restore();
+
+            if (highlightedSegment) {
+                ctx.save();
+                ctx.translate(panOffset.x, panOffset.y);
+                ctx.scale(zoomScale, zoomScale);
+                ctx.translate(pad, pad + h);
+                ctx.scale(1, -1);
+                ctx.translate(-gcode.minX * scale, -gcode.minY * scale);
+
+                if (highlightedSegment.isCell) {
+                    
+                    ctx.fillStyle = 'rgba(56, 189, 248, 0.2)';
+                    ctx.beginPath();
+                    ctx.moveTo(highlightedSegment.vertices[0].x * scale, highlightedSegment.vertices[0].y * scale);
+                    for (let idx = 1; idx < highlightedSegment.vertices.length; idx++) {
+                        ctx.lineTo(highlightedSegment.vertices[idx].x * scale, highlightedSegment.vertices[idx].y * scale);
+                    }
+                    ctx.closePath();
+                    ctx.fill();
+
+                    ctx.strokeStyle = 'rgba(56, 189, 248, 0.85)';
+                    ctx.lineWidth = 3 / zoomScale;
+                    ctx.stroke();
+                } else {
+                    const pass = gcode.passes[highlightedSegment.passIdx];
+                    if (pass && pass.length > 0) {
+                        
+                        ctx.beginPath();
+                        for (let i = 0; i < pass.length; i++) {
+                            const px = pass[i].x * scale;
+                            const py = pass[i].y * scale;
+                            if (i === 0) ctx.moveTo(px, py);
+                            else ctx.lineTo(px, py);
+                        }
+                        ctx.strokeStyle = 'rgba(56, 189, 248, 0.35)';
+                        ctx.lineWidth = 5 / zoomScale;
+                        ctx.stroke();
+
+                        if (highlightedSegment.startIdx > 0) {
+                            ctx.beginPath();
+                            let first = true;
+                            for (let j = highlightedSegment.startIdx; j <= highlightedSegment.endIdx; j++) {
+                                const p1 = pass[j - 1];
+                                const p2 = pass[j];
+                                if (first) {
+                                    ctx.moveTo(p1.x * scale, p1.y * scale);
+                                    first = false;
+                                }
+                                ctx.lineTo(p2.x * scale, p2.y * scale);
+                            }
+                            ctx.strokeStyle = 'var(--color-danger)';
+                            ctx.lineWidth = 3 / zoomScale;
+                            ctx.lineCap = 'round';
+                            ctx.lineJoin = 'round';
+                            ctx.stroke();
+                        }
+                    }
+                }
+                ctx.restore();
+            }
+            drawAxes(ctx, gcode, canvas.width, canvas.height, pad);
+        }
+
+        function drawDetailGrid(ctx, gcode, scale) {
+            ctx.save();
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.03)';
+            ctx.lineWidth = 1 / zoomScale;
+
+            const step = 10; 
+            const startX = Math.floor(gcode.minX / step) * step;
+            const endX = Math.ceil(gcode.maxX / step) * step;
+            const startY = Math.floor(gcode.minY / step) * step;
+            const endY = Math.ceil(gcode.maxY / step) * step;
+
+            for (let x = startX; x <= endX; x += step) {
+                ctx.beginPath();
+                ctx.moveTo(x * scale, gcode.minY * scale);
+                ctx.lineTo(x * scale, gcode.maxY * scale);
+                ctx.stroke();
+            }
+            for (let y = startY; y <= endY; y += step) {
+                ctx.beginPath();
+                ctx.moveTo(gcode.minX * scale, y * scale);
+                ctx.lineTo(gcode.maxX * scale, y * scale);
+                ctx.stroke();
+            }
+
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
+            ctx.setLineDash([5, 5]);
+            ctx.strokeRect(gcode.minX * scale, gcode.minY * scale, (gcode.maxX - gcode.minX) * scale, (gcode.maxY - gcode.minY) * scale);
+            ctx.restore();
+        }
+
+        function drawAxes(ctx, gcode, width, height, pad) {
+            const dx = (gcode.maxX - gcode.minX).toFixed(1);
+            const dy = (gcode.maxY - gcode.minY).toFixed(1);
+            ctx.save();
+            ctx.fillStyle = '#64748b';
+            ctx.font = 'bold 11px JetBrains Mono, Courier New';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'top';
+            ctx.fillText(`Ширина X: ${dx} мм`, width / 2, height - pad / 2 + 5);
+
+            ctx.save();
+            ctx.translate(pad / 2 - 5, height / 2);
+            ctx.rotate(-Math.PI / 2);
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'bottom';
+            ctx.fillText(`Высота Y: ${dy} мм`, 0, 0);
+            ctx.restore();
+
+            ctx.translate(30, height - 30);
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+            ctx.lineWidth = 2;
+
+            ctx.beginPath();
+            ctx.moveTo(0, 0);
+            ctx.lineTo(20, 0);
+            ctx.strokeStyle = '#ef4444'; 
+            ctx.stroke();
+            ctx.fillStyle = '#ef4444';
+            ctx.font = '9px sans-serif';
+            ctx.fillText('X', 24, -4);
+
+            ctx.beginPath();
+            ctx.moveTo(0, 0);
+            ctx.lineTo(0, -20);
+            ctx.strokeStyle = '#22c55e'; 
+            ctx.stroke();
+            ctx.fillStyle = '#22c55e';
+            ctx.fillText('Y', -3, -30);
+
+            ctx.restore();
+        }
+
+        function getDistanceToSegment(px, py, ax, ay, bx, by) {
+            const dx = bx - ax;
+            const dy = by - ay;
+            const lenSq = dx * dx + dy * dy;
+            if (lenSq === 0) return { dist: Math.hypot(px - ax, py - ay), x: ax, y: ay };
+            let t = ((px - ax) * dx + (py - ay) * dy) / lenSq;
+            t = Math.max(0, Math.min(1, t));
+            return { dist: Math.hypot(px - (ax + t * dx), py - (ay + t * dy)), x: ax + t * dx, y: ay + t * dy };
+        }
+
+        function getRaySegmentIntersection(px, py, dx, dy, ax, ay, bx, by) {
+            const sx = bx - ax;
+            const sy = by - ay;
+            const denom = dx * sy - dy * sx;
+            if (Math.abs(denom) < 0.0001) return null;
+
+            const t = ((ax - px) * sy - (ay - py) * sx) / denom;
+            const u = ((ax - px) * dy - (ay - py) * dx) / denom;
+
+            if (t >= 0 && u >= 0 && u <= 1) {
+                return { x: px + t * dx, y: py + t * dy, t: t };
+            }
+            return null;
+        }
+
+        function getLineIntersection(p1, p2, q1, q2) {
+            const d = (p1.x - p2.x) * (q1.y - q2.y) - (p1.y - p2.y) * (q1.x - q2.x);
+            if (Math.abs(d) < 0.0001) return null;
+            const t = ((p1.x - q1.x) * (q1.y - q2.y) - (p1.y - q1.y) * (q1.x - q2.x)) / d;
+            return { x: p1.x + t * (p2.x - p1.x), y: p1.y + t * (p2.y - p1.y) };
+        }
+
+        function getStableLinePoints(hit) {
+            const pass = currentGCode.passes[hit.passIdx];
+            let segmentIdx = -1;
+            for (let i = 1; i < pass.length; i++) {
+                if (pass[i] === hit.p2 || (Math.abs(pass[i].x - hit.p2.x) < 0.0001 && Math.abs(pass[i].y - hit.p2.y) < 0.0001)) {
+                    segmentIdx = i;
+                    break;
+                }
+            }
+            if (segmentIdx !== -1) {
+                const seg = getMergedCollinearSegments(currentGCode, hit.passIdx, segmentIdx);
+                if (seg) {
+                    return {
+                        p1: pass[seg.startIdx - 1],
+                        p2: pass[seg.endIdx]
+                    };
+                }
+            }
+            return { p1: hit.p1, p2: hit.p2 };
+        }
+
+        function getMergedCollinearSegments(gcode, passIdx, segmentIdx) {
+            const pass = gcode.passes[passIdx];
+            if (!pass || pass.length <= segmentIdx) return null;
+            const p1_ref = pass[segmentIdx - 1];
+            const p2_ref = pass[segmentIdx];
+            const dx_ref = p2_ref.x - p1_ref.x;
+            const dy_ref = p2_ref.y - p1_ref.y;
+            const len_ref = Math.hypot(dx_ref, dy_ref);
+            if (len_ref < 0.001) return { passIdx, startIdx: segmentIdx, endIdx: segmentIdx };
+            let startIdx = segmentIdx, endIdx = segmentIdx;
+
+            for (let j = segmentIdx - 1; j >= 1; j--) {
+                const p1 = pass[j - 1], p2 = pass[j];
+                
+                if (Math.abs(p2.z - p2_ref.z) > 0.01 || Math.abs(p1.z - p1_ref.z) > 0.01) break;
+                const dx = p2.x - p1.x, dy = p2.y - p1.y, len = Math.hypot(dx, dy);
+                if (len < 0.001) break;
+                if (Math.abs(dx_ref * dy - dy_ref * dx) / (len_ref * len) < 0.01 && (dx_ref * dx + dy_ref * dy) > 0) startIdx = j;
+                else break;
+            }
+            for (let j = segmentIdx + 1; j < pass.length; j++) {
+                const p1 = pass[j - 1], p2 = pass[j];
+                
+                if (Math.abs(p2.z - p2_ref.z) > 0.01 || Math.abs(p1.z - p1_ref.z) > 0.01) break;
+                const dx = p2.x - p1.x, dy = p2.y - p1.y, len = Math.hypot(dx, dy);
+                if (len < 0.001) break;
+                if (Math.abs(dx_ref * dy - dy_ref * dx) / (len_ref * len) < 0.01 && (dx_ref * dx + dy_ref * dy) > 0) endIdx = j;
+                else break;
+            }
+            return { passIdx, startIdx, endIdx };
+        }
+
+        function getHoveredCellBounds(gx, gy) {
+            if (!currentGCode) return null;
+
+            const numRays = 32;
+            const directions = [];
+            for (let i = 0; i < numRays; i++) {
+                const angle = (i * 2 * Math.PI) / numRays;
+                directions.push({
+                    dx: Math.cos(angle),
+                    dy: Math.sin(angle),
+                    angle: angle
+                });
+            }
+
+            const hits = [];
+            directions.forEach(function (dir) {
+                let closestHit = null;
+                currentGCode.passes.forEach(function (pass, passIdx) {
+                    for (let i = 1; i < pass.length; i++) {
+                        const p1 = pass[i - 1], p2 = pass[i];
+                        const ax = p1.x, ay = p1.y, bx = p2.x, by = p2.y;
+                        if (Math.hypot(bx - ax, by - ay) < 0.01) continue;
+
+                        const hit = getRaySegmentIntersection(gx, gy, dir.dx, dir.dy, ax, ay, bx, by);
+                        if (hit) {
+                            if (!closestHit || hit.t < closestHit.t) {
+                                closestHit = {
+                                    x: hit.x,
+                                    y: hit.y,
+                                    p1: p1,
+                                    p2: p2,
+                                    passIdx: passIdx,
+                                    angle: dir.angle,
+                                    t: hit.t
+                                };
+                            }
+                        }
+                    }
+                });
+                if (closestHit) {
+                    hits.push(closestHit);
+                }
+            });
+
+            if (hits.length < 3) return null;
+
+            const uniqueWalls = [];
+            const seen = new Set();
+            hits.forEach(function (hit) {
+                const stableLine = getStableLinePoints(hit);
+                const p1 = stableLine.p1, p2 = stableLine.p2;
+                const key = p1.x < p2.x || (p1.x === p2.x && p1.y < p2.y) ?
+                    p1.x.toFixed(2) + ',' + p1.y.toFixed(2) + '_' + p2.x.toFixed(2) + ',' + p2.y.toFixed(2) :
+                    p2.x.toFixed(2) + ',' + p2.y.toFixed(2) + '_' + p1.x.toFixed(2) + ',' + p1.y.toFixed(2);
+
+                if (!seen.has(key)) {
+                    seen.add(key);
+                    uniqueWalls.push({
+                        line: stableLine,
+                        angle: hit.angle,
+                        hit: hit
+                    });
+                }
+            });
+
+            if (uniqueWalls.length < 3) return null;
+
+            let maxWallLen = 0;
+            uniqueWalls.forEach(function (w) {
+                const len = Math.hypot(w.line.p2.x - w.line.p1.x, w.line.p2.y - w.line.p1.y);
+                if (len > maxWallLen) maxWallLen = len;
+            });
+
+            const filteredWalls = uniqueWalls.filter(function (w) {
+                const len = Math.hypot(w.line.p2.x - w.line.p1.x, w.line.p2.y - w.line.p1.y);
+                if (len < 5.0 && len < maxWallLen * 0.2) {
+                    return false;
+                }
+                return true;
+            });
+
+            let finalWalls = uniqueWalls;
+            if (filteredWalls.length >= 3) {
+                finalWalls = filteredWalls;
+            }
+
+            finalWalls.sort(function (a, b) { return a.angle - b.angle; });
+
+            const vertices = [];
+            const N = finalWalls.length;
+            for (let i = 0; i < N; i++) {
+                const w1 = finalWalls[i].line;
+                const w2 = finalWalls[(i + 1) % N].line;
+                const fallback = {
+                    x: (finalWalls[i].hit.x + finalWalls[(i + 1) % N].hit.x) / 2,
+                    y: (finalWalls[i].hit.y + finalWalls[(i + 1) % N].hit.y) / 2
+                };
+                const pt = getLineIntersection(w1.p1, w1.p2, w2.p1, w2.p2) || fallback;
+                vertices.push(pt);
+            }
+
+            let cellMinX = Infinity, cellMinY = Infinity;
+            let cellMaxX = -Infinity, cellMaxY = -Infinity;
+            vertices.forEach(function (pt) {
+                cellMinX = Math.min(cellMinX, pt.x);
+                cellMinY = Math.min(cellMinY, pt.y);
+                cellMaxX = Math.max(cellMaxX, pt.x);
+                cellMaxY = Math.max(cellMaxY, pt.y);
+            });
+
+            let passMinZ = Infinity;
+            let cellPassIdx = 0;
+            finalWalls.forEach(function (w) {
+                const zVal = Math.min(w.line.p1.z, w.line.p2.z);
+                if (zVal < passMinZ) {
+                    passMinZ = zVal;
+                    if (w.hit) cellPassIdx = w.hit.passIdx;
+                }
+            });
+
+            return {
+                minX: cellMinX,
+                minY: cellMinY,
+                maxX: cellMaxX,
+                maxY: cellMaxY,
+                width: cellMaxX - cellMinX,
+                height: cellMaxY - cellMinY,
+                z: passMinZ,
+                passIdx: cellPassIdx,
+                vertices: vertices
+            };
+        }
+
+        function getOffsetPolygon(vertices, R) {
+            const N = vertices.length;
+            if (N < 3) return vertices;
+
+            let cx = 0, cy = 0;
+            vertices.forEach(function (v) { cx += v.x; cy += v.y; });
+            cx /= N;
+            cy /= N;
+
+            const offsetLines = [];
+            for (let i = 0; i < N; i++) {
+                const p1 = vertices[i];
+                const p2 = vertices[(i + 1) % N];
+                const dx = p2.x - p1.x, dy = p2.y - p1.y;
+                const len = Math.hypot(dx, dy) || 1;
+                let nx = -dy / len, ny = dx / len;
+                if ((cx - p1.x) * nx + (cy - p1.y) * ny < 0) { nx = -nx; ny = -ny; }
+                offsetLines.push({
+                    p1: { x: p1.x + nx * R, y: p1.y + ny * R },
+                    p2: { x: p2.x + nx * R, y: p2.y + ny * R }
+                });
+            }
+
+            const offsetVertices = [];
+            for (let i = 0; i < N; i++) {
+                const l1 = offsetLines[(i - 1 + N) % N];
+                const l2 = offsetLines[i];
+                const fallback = {
+                    x: vertices[i].x + (cx - vertices[i].x) * (R / (Math.hypot(cx - vertices[i].x, cy - vertices[i].y) || 1)),
+                    y: vertices[i].y + (cy - vertices[i].y) * (R / (Math.hypot(cx - vertices[i].x, cy - vertices[i].y) || 1))
+                };
+                const pt = getLineIntersection(l1.p1, l1.p2, l2.p1, l2.p2) || fallback;
+                offsetVertices.push(pt);
+            }
+            return offsetVertices;
+        }
+
+        function drawTooltipPreview(highlightInfo, cutterD) {
+            const tooltipCanvas = document.getElementById('tooltip-canvas');
+            if (!tooltipCanvas) return;
+            const ctx = tooltipCanvas.getContext('2d');
+            ctx.clearRect(0, 0, tooltipCanvas.width, tooltipCanvas.height);
+
+            const pad = 20;
+            const cw = tooltipCanvas.width - pad * 2;
+            const ch = tooltipCanvas.height - pad * 2;
+
+            if (highlightInfo.isCell) {
+                const poly_final = getOffsetPolygon(highlightInfo.vertices, cutterD / 2);
+
+                let minX = Infinity, minY = Infinity;
+                let maxX = -Infinity, maxY = -Infinity;
+                poly_final.forEach(function (v) {
+                    minX = Math.min(minX, v.x);
+                    minY = Math.min(minY, v.y);
+                    maxX = Math.max(maxX, v.x);
+                    maxY = Math.max(maxY, v.y);
+                });
+
+                const dx = maxX - minX || 1;
+                const dy = maxY - minY || 1;
+                const scale = Math.min(cw / dx, ch / dy);
+
+                const offsetX = pad + (cw - dx * scale) / 2 - minX * scale;
+                const offsetY = pad + (ch - dy * scale) / 2 - minY * scale;
+
+                const toCanvas = function (pt) {
+                    return {
+                        x: pt.x * scale + offsetX,
+                        y: tooltipCanvas.height - (pt.y * scale + offsetY)
+                    };
+                };
+
+                const c_poly = poly_final.map(toCanvas);
+
+                ctx.fillStyle = 'rgba(56, 189, 248, 0.15)';
+                ctx.beginPath();
+                ctx.moveTo(c_poly[0].x, c_poly[0].y);
+                for (let idx = 1; idx < c_poly.length; idx++) {
+                    ctx.lineTo(c_poly[idx].x, c_poly[idx].y);
+                }
+                ctx.closePath();
+                ctx.fill();
+
+                ctx.strokeStyle = '#38bdf8';
+                ctx.lineWidth = 1.5;
+                ctx.stroke();
+
+                const drawSideLabel = function (p1_g, p2_g, p1_c, p2_c) {
+                    const len = Math.hypot(p2_g.x - p1_g.x, p2_g.y - p1_g.y);
+                    if (len < 1.0) return; 
+                    const mx_c = (p1_c.x + p2_c.x) / 2;
+                    const my_c = (p1_c.y + p2_c.y) / 2;
+
+                    const dx_c = p2_c.x - p1_c.x;
+                    const dy_c = p2_c.y - p1_c.y;
+                    const len_c = Math.hypot(dx_c, dy_c) || 1;
+
+                    const nx = dy_c / len_c;
+                    const ny = -dx_c / len_c;
+
+                    const lx = mx_c + nx * 8;
+                    const ly = my_c + ny * 8;
+
+                    let angle = Math.atan2(dy_c, dx_c);
+                    if (angle > Math.PI / 2) angle -= Math.PI;
+                    if (angle < -Math.PI / 2) angle += Math.PI;
+
+                    ctx.save();
+                    ctx.translate(lx, ly);
+                    ctx.rotate(angle);
+                    ctx.fillStyle = '#94a3b8';
+                    ctx.font = 'bold 9px monospace';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(len.toFixed(1), 0, 0);
+                    ctx.restore();
+                };
+
+                const M = poly_final.length;
+                for (let idx = 0; idx < M; idx++) {
+                    const nextIdx = (idx + 1) % M;
+                    drawSideLabel(poly_final[idx], poly_final[nextIdx], c_poly[idx], c_poly[nextIdx]);
+                }
+            } else {
+                const pass = currentGCode.passes[highlightInfo.passIdx];
+                const p1 = pass[highlightInfo.startIdx - 1];
+                const p2 = pass[highlightInfo.endIdx];
+                if (!p1 || !p2) return;
+
+                const dx = Math.abs(p2.x - p1.x);
+                const dy = Math.abs(p2.y - p1.y);
+                const scale = Math.min(cw / (dx || 1), ch / (dy || 1));
+
+                const minX = Math.min(p1.x, p2.x);
+                const minY = Math.min(p1.y, p2.y);
+                const offsetX = pad + (cw - dx * scale) / 2 - minX * scale;
+                const offsetY = pad + (ch - dy * scale) / 2 - minY * scale;
+
+                const toCanvas = function (pt) {
+                    return {
+                        x: pt.x * scale + offsetX,
+                        y: tooltipCanvas.height - (pt.y * scale + offsetY)
+                    };
+                };
+
+                const c1 = toCanvas(p1);
+                const c2 = toCanvas(p2);
+
+                ctx.strokeStyle = '#ef4444';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.moveTo(c1.x, c1.y);
+                ctx.lineTo(c2.x, c2.y);
+                ctx.stroke();
+
+                const length = Math.hypot(p2.x - p1.x, p2.y - p1.y);
+                ctx.fillStyle = '#94a3b8';
+                ctx.font = '10px JetBrains Mono, monospace';
+                ctx.textAlign = 'center';
+                ctx.fillText(`L = ${length.toFixed(2)} мм`, tooltipCanvas.width / 2, tooltipCanvas.height - 10);
+            }
+        }
+
+        canvas.addEventListener('mousemove', function (e) {
+            if (!currentGCode) return;
+            if (isDragging) return;
+
+            const rect = canvas.getBoundingClientRect();
+            const mx_screen = (e.clientX - rect.left) * (canvas.width / rect.width);
+            const my_screen = (e.clientY - rect.top) * (canvas.height / rect.height);
+
+            const mx = (mx_screen - panOffset.x) / zoomScale;
+            const my = (my_screen - panOffset.y) / zoomScale;
+
+            const pad = 50;
+            const w = canvas.width - pad * 2;
+            const h = canvas.height - pad * 2;
+            const scale = Math.min(w / (currentGCode.maxX - currentGCode.minX || 1), h / (currentGCode.maxY - currentGCode.minY || 1));
+
+            let nearest = null;
+            let minDist = 15 / zoomScale; 
+
+            currentGCode.passes.forEach(function (pass, passIdx) {
+                for (let i = 1; i < pass.length; i++) {
+                    const ax = pad + (pass[i - 1].x - currentGCode.minX) * scale;
+                    const ay = pad + h - (pass[i - 1].y - currentGCode.minY) * scale;
+                    const bx = pad + (pass[i].x - currentGCode.minX) * scale;
+                    const by = pad + h - (pass[i].y - currentGCode.minY) * scale;
+                    const res = getDistanceToSegment(mx, my, ax, ay, bx, by);
+                    if (res.dist < minDist) {
+                        minDist = res.dist;
+                        nearest = { passIdx, segmentIdx: i, p1: pass[i - 1], p2: pass[i] };
+                    }
+                }
+            });
+
+            const isMergeActive = document.getElementById('mergeLinesCheck').checked;
+            let highlightInfo = null;
+
+            if (nearest) {
+                highlightInfo = isMergeActive ?
+                    getMergedCollinearSegments(currentGCode, nearest.passIdx, nearest.segmentIdx) :
+                    { passIdx: nearest.passIdx, startIdx: nearest.segmentIdx, endIdx: nearest.segmentIdx };
+                highlightInfo.isCell = false;
+
+                const pass = currentGCode.passes[nearest.passIdx];
+                let passMinZ = Infinity;
+                pass.forEach(pt => {
+                    if (pt.z < passMinZ) passMinZ = pt.z;
+                });
+                highlightInfo.hoveredZ = passMinZ;
+            } else {
+                const gx = (mx - pad) / scale + currentGCode.minX;
+                const gy = currentGCode.minY + (pad + h - my) / scale;
+                const cell = getHoveredCellBounds(gx, gy);
+                if (cell) highlightInfo = { isCell: true, ...cell };
+            }
+
+            if (highlightInfo) {
+                drawGCodePasses(currentGCode, canvas, highlightInfo);
+                const cutterD = parseFloat(document.getElementById('cutterDiameter').value || 0);
+
+                let tooltipX = e.clientX + 15;
+                let tooltipY = e.clientY + 15;
+
+                if (tooltipX + 320 > window.innerWidth) {
+                    tooltipX = e.clientX - 320;
+                }
+                if (tooltipY + 280 > window.innerHeight) {
+                    tooltipY = e.clientY - 280;
+                }
+
+                tooltip.style.left = tooltipX + 'px';
+                tooltip.style.top = tooltipY + 'px';
+                tooltip.style.display = 'block';
+
+                if (!highlightInfo.isCell) {
+                    const pass = currentGCode.passes[highlightInfo.passIdx];
+                    let totalLen3d = 0;
+                    for (let j = highlightInfo.startIdx; j <= highlightInfo.endIdx; j++) {
+                        const p1 = pass[j - 1], p2 = pass[j];
+                        totalLen3d += Math.hypot(p2.x - p1.x, p2.y - p1.y, p2.z - p1.z);
+                    }
+
+                    tooltip.innerHTML =
+                        `<div class="tap-tooltip-title">
+                            <span>${(highlightInfo.endIdx > highlightInfo.startIdx ? 'Прямая линия' : 'Отрезок траектории')}</span>
+                            <span style="color:var(--text-muted)">Проход #${highlightInfo.passIdx + 1}</span>
+                        </div>
+                        <div class="tap-tooltip-row">
+                            <span class="tap-tooltip-label">Длина:</span>
+                            <span class="tap-tooltip-value" style="color:var(--color-warning);">${totalLen3d.toFixed(2)} мм</span>
+                        </div>
+                        <div class="tap-tooltip-row">
+                            <span class="tap-tooltip-label">Глубина Z:</span>
+                            <span class="tap-tooltip-value font-monospace">${Math.abs(highlightInfo.hoveredZ).toFixed(2)} мм</span>
+                        </div>
+                        <canvas id="tooltip-canvas" width="266" height="150"></canvas>`;
+                } else {
+                    const widthBoss = Math.max(0, highlightInfo.width - cutterD);
+                    const heightBoss = Math.max(0, highlightInfo.height - cutterD);
+
+                    tooltip.innerHTML =
+                        `<div class="tap-tooltip-title">
+                            <span>Замкнутый контур</span>
+                            <span style="color:var(--color-accent)"><i class="fas fa-vector-square"></i></span>
+                        </div>
+                        <div class="tap-tooltip-row">
+                            <span class="tap-tooltip-label">Ширина X:</span>
+                            <span class="tap-tooltip-value">${widthBoss.toFixed(2)} мм</span>
+                        </div>
+                        <div class="tap-tooltip-row">
+                            <span class="tap-tooltip-label">Высота Y:</span>
+                            <span class="tap-tooltip-value">${heightBoss.toFixed(2)} мм</span>
+                        </div>
+                        <canvas id="tooltip-canvas" width="266" height="150"></canvas>`;
+                }
+                drawTooltipPreview(highlightInfo, cutterD);
+            } else {
+                hideTooltip();
+            }
+        });
+
+        canvas.addEventListener('mouseleave', hideTooltip);
+
+        function hideTooltip() {
+            tooltip.style.display = 'none';
+            if (currentGCode) {
+                drawGCodePasses(currentGCode, canvas);
+            }
+        }
+
+        function renderGcodeInfo(gcode) {
+            const el = document.getElementById('gcode-info-content');
+            if (!el) return;
+
+            const width = (gcode.maxX - gcode.minX).toFixed(2);
+            const height = (gcode.maxY - gcode.minY).toFixed(2);
+
+            let liftZ = gcode.maxG0Z;
+            if (liftZ === -Infinity || liftZ === undefined) {
+                liftZ = -Infinity;
+                gcode.passes.forEach(pass => pass.forEach(pt => {
+                    if (pt.z > liftZ && pt.z < 1000) liftZ = pt.z;
+                }));
+            }
+            if (liftZ === -Infinity) liftZ = 0;
+
+            el.innerHTML = `
+                <div class="info-row">
+                    <span class="info-label"><i class="fas fa-arrows-alt-h"></i> Габариты</span>
+                    <span class="info-value accent">${width} × ${height} мм</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label"><i class="fas fa-level-down-alt"></i> Макс. глубина</span>
+                    <span class="info-value danger">${Math.abs(gcode.minZ).toFixed(2)} мм</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label"><i class="fas fa-level-up-alt"></i> Высота безопасного Z</span>
+                    <span class="info-value" style="color: var(--color-success);">${liftZ.toFixed(2)} мм</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label"><i class="fas fa-route"></i> Число проходов</span>
+                    <span class="info-value">${gcode.passes.length}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label"><i class="fas fa-info-circle"></i> Всего точек</span>
+                    <span class="info-value">${gcode.passes.reduce((sum, p) => sum + p.length, 0)}</span>
+                </div>
+            `;
+        }
+
+        function updateLegend(count) {
+            const legendList = document.getElementById('legendList');
+            if (!legendList) return;
+            legendList.innerHTML = '';
+
+            const limit = Math.min(count, 8);
+            for (let i = 0; i < limit; i++) {
+                const color = passColors[i % passColors.length];
+                const chip = document.createElement('div');
+                chip.className = 'legend-item';
+                chip.innerHTML = `
+                    <div class="legend-color" style="background-color: ${color}"></div>
+                    <span>Проход ${i + 1}</span>
+                `;
+                legendList.appendChild(chip);
+            }
+
+            if (count > 8) {
+                const more = document.createElement('span');
+                more.style.fontSize = '0.7rem';
+                more.style.color = 'var(--text-muted)';
+                more.textContent = `и ещё ${count - 8} проходов...`;
+                legendList.appendChild(more);
+            }
+        }
+
+        function generateSampleGCode() {
+            let gcodeLines = [
+                "; Test demo plate",
+                "G90",
+                "G21",
+                "G0 Z10.0"
+            ];
+
+            gcodeLines.push("; Outer Contour");
+            gcodeLines.push("G0 X10.0 Y10.0");
+            gcodeLines.push("G1 Z-2.5 F1000");
+            gcodeLines.push("G1 X90.0 Y10.0");
+            gcodeLines.push("G1 X90.0 Y90.0");
+            gcodeLines.push("G1 X10.0 Y90.0");
+            gcodeLines.push("G1 X10.0 Y10.0");
+            gcodeLines.push("G0 Z10.0");
+
+            gcodeLines.push("; Inner Pocket");
+            gcodeLines.push("G0 X30.0 Y30.0");
+            gcodeLines.push("G1 Z-4.0 F800");
+            gcodeLines.push("G1 X70.0 Y30.0");
+            gcodeLines.push("G1 X70.0 Y70.0");
+            gcodeLines.push("G1 X30.0 Y70.0");
+            gcodeLines.push("G1 X30.0 Y30.0");
+            gcodeLines.push("G0 Z10.0");
+
+            return gcodeLines.join("\n");
+        }
+    </script>
 </body>
-</html>
 
+</html>
