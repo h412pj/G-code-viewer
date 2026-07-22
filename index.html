@@ -501,7 +501,7 @@
             box-shadow: var(--shadow-xl);
             border: 1px solid rgba(255, 255, 255, 0.12);
             z-index: 9999;
-            width: 300px;
+            width: 360px;
         }
 
         .tap-tooltip-title {
@@ -1508,6 +1508,11 @@
 
                 const c_poly = poly_final.map(toCanvas);
 
+                let cx_c = 0, cy_c = 0;
+                c_poly.forEach(function (v) { cx_c += v.x; cy_c += v.y; });
+                cx_c /= c_poly.length;
+                cy_c /= c_poly.length;
+
                 ctx.fillStyle = 'rgba(56, 189, 248, 0.15)';
                 ctx.beginPath();
                 ctx.moveTo(c_poly[0].x, c_poly[0].y);
@@ -1531,11 +1536,19 @@
                     const dy_c = p2_c.y - p1_c.y;
                     const len_c = Math.hypot(dx_c, dy_c) || 1;
 
-                    const nx = dy_c / len_c;
-                    const ny = -dx_c / len_c;
+                    let nx = dy_c / len_c;
+                    let ny = -dx_c / len_c;
 
-                    const lx = mx_c + nx * 8;
-                    const ly = my_c + ny * 8;
+                    const vx = mx_c - cx_c;
+                    const vy = my_c - cy_c;
+                    const dot = nx * vx + ny * vy;
+                    if (dot < 0) {
+                        nx = -nx;
+                        ny = -ny;
+                    }
+
+                    const lx = mx_c + nx * 12;
+                    const ly = my_c + ny * 12;
 
                     let angle = Math.atan2(dy_c, dx_c);
                     if (angle > Math.PI / 2) angle -= Math.PI;
@@ -1545,7 +1558,7 @@
                     ctx.translate(lx, ly);
                     ctx.rotate(angle);
                     ctx.fillStyle = '#94a3b8';
-                    ctx.font = 'bold 9px monospace';
+                    ctx.font = 'bold 11px monospace';
                     ctx.textAlign = 'center';
                     ctx.textBaseline = 'middle';
                     ctx.fillText(len.toFixed(1), 0, 0);
@@ -1591,9 +1604,9 @@
 
                 const length = Math.hypot(p2.x - p1.x, p2.y - p1.y);
                 ctx.fillStyle = '#94a3b8';
-                ctx.font = '10px JetBrains Mono, monospace';
+                ctx.font = '12px JetBrains Mono, monospace';
                 ctx.textAlign = 'center';
-                ctx.fillText(`L = ${length.toFixed(2)} мм`, tooltipCanvas.width / 2, tooltipCanvas.height - 10);
+                ctx.fillText(`L = ${length.toFixed(2)} мм`, tooltipCanvas.width / 2, tooltipCanvas.height - 12);
             }
         }
 
@@ -1659,11 +1672,11 @@
                 let tooltipX = e.clientX + 15;
                 let tooltipY = e.clientY + 15;
 
-                if (tooltipX + 320 > window.innerWidth) {
-                    tooltipX = e.clientX - 320;
+                if (tooltipX + 380 > window.innerWidth) {
+                    tooltipX = e.clientX - 380;
                 }
-                if (tooltipY + 280 > window.innerHeight) {
-                    tooltipY = e.clientY - 280;
+                if (tooltipY + 310 > window.innerHeight) {
+                    tooltipY = e.clientY - 310;
                 }
 
                 tooltip.style.left = tooltipX + 'px';
@@ -1691,7 +1704,7 @@
                             <span class="tap-tooltip-label">Глубина Z:</span>
                             <span class="tap-tooltip-value font-monospace">${Math.abs(highlightInfo.hoveredZ).toFixed(2)} мм</span>
                         </div>
-                        <canvas id="tooltip-canvas" width="266" height="150"></canvas>`;
+                        <canvas id="tooltip-canvas" width="320" height="180"></canvas>`;
                 } else {
                     const widthBoss = Math.max(0, highlightInfo.width - cutterD);
                     const heightBoss = Math.max(0, highlightInfo.height - cutterD);
@@ -1709,7 +1722,7 @@
                             <span class="tap-tooltip-label">Высота Y:</span>
                             <span class="tap-tooltip-value">${heightBoss.toFixed(2)} мм</span>
                         </div>
-                        <canvas id="tooltip-canvas" width="266" height="150"></canvas>`;
+                        <canvas id="tooltip-canvas" width="320" height="180"></canvas>`;
                 }
                 drawTooltipPreview(highlightInfo, cutterD);
             } else {
