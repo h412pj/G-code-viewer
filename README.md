@@ -4,7 +4,7 @@
 
 Онлайн-версия доступна по ссылке: https://h412pj.github.io/G-code-viewer/
 
-![Screenshot](screenshot_1.jpg)
+![Screenshot](screenshot.jpg)
 
 ## Особенности
 
